@@ -1,0 +1,9 @@
+[package]
+name = "xld-rs"
+version = "0.1.0"
+authors = ["Antoine Busch <abusch@atlassian.com>"]
+
+[dependencies]
+x11="2.7"
+clap="2"
+failure="0.1"
