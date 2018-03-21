@@ -40,13 +40,19 @@ fn layout(settings: Settings) -> Result<(), Error> {
         bail!("no outputs found");
     }
 
+    // output verbose information
     if !settings.quiet || settings.info {
-        println!("{:?}", current_outputs);
+        for output in &current_outputs {
+            println!("{}", output);
+        }
+        println!();
         println!("laptop lid {}", if monitors.laptop_lid_closed { "closed" } else { "open or not present" });
     }
 
-    // output verbose information
     // current info is all output, we're done
+    if settings.info {
+        return Ok(());
+    }
     // Order the outputs if the user wishes
     // activate outputs and determine primary
     // arrange mirrored or left to right

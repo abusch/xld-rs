@@ -1,11 +1,13 @@
 use std::sync::Arc;
 use std::ffi::CStr;
+use std::os::raw::{c_int, c_ulong, c_uchar};
 use std::ptr;
 
 use x11::xlib;
 use x11::xrandr;
 
 use super::{Pos};
+use edid::Edid;
 use output::{Output, OutputState};
 use mode::Mode;
 
@@ -27,6 +29,7 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             let current_pos;
             let current_mode;
             let mut rr_mode = 0;
+            let mut edid = None;
             if output_info.crtc != 0 {
                 // active outputs have crtc info
                 state = OutputState::Active;
@@ -48,12 +51,45 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             }
 
             // iterate all properties to find EDID; XRRQueryOutputProperty fails when queried with XInternAtom
+            let mut nprop: c_int = 0;
+            let atoms = xrandr::XRRListOutputProperties(display, rr_output, &mut nprop);
+            for i in 0..nprop {
+                let atom = *atoms.offset(i as isize);
+                let atom_name = CStr::from_ptr(xlib::XGetAtomName(display, atom));
+                if atom_name.to_string_lossy() == xrandr::RR_PROPERTY_RANDR_EDID {
+                    let mut actual_type: xlib::Atom = 0;
+                    let mut actual_format: c_int = 0;
+                    let mut nitems: c_ulong = 0;
+                    let mut bytes_after: c_ulong = 0;
+                    let mut props: *mut c_uchar = ptr::null_mut();
+                    xrandr::XRRGetOutputProperty(display, rr_output, atom,
+                                                 0,
+                                                 64,
+                                                 false as xlib::Bool,
+                                                 false as xlib::Bool,
+                                                 xlib::AnyPropertyType as xlib::Atom,
+                                                 &mut actual_type,
+                                                 &mut actual_format,
+                                                 &mut nitems,
+                                                 &mut bytes_after,
+                                                 &mut props,
+                                                 );
+
+                    // Convert edid to a slice
+                    let edid_slice = ::std::slice::from_raw_parts(props, nitems as usize);
+                    edid = Some(Arc::new(Edid::new(edid_slice, name.to_string_lossy().as_ref())));
+
+                    break;
+                }
+            }
+
             // TODO finish
 
             outputs.push(Arc::new(Output {
                 name: name.to_string_lossy().into_owned(),
-                state: state,
+                state,
                 modes: Vec::new(), // TODO
+                edid ,
 
             }));
         }
