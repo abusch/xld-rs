@@ -1,59 +1,26 @@
 #![allow(dead_code)]
 extern crate x11;
 extern crate clap;
+#[macro_use]
 extern crate failure;
 
 mod edid;
 mod mode;
+mod monitors;
 mod output;
 mod xrandrutils;
 
-use std::fs::{read_dir, File};
-use std::io::Read;
+use monitors::Monitors;
 
+use clap::{App, Arg};
 use failure::Error;
-
-
-struct Monitors {
-    laptop_lid_closed: bool,
-}
-
-impl Monitors {
-    pub fn new() -> Monitors {
-        Monitors {
-            laptop_lid_closed: Self::calculate_laptop_lid_closed().unwrap_or(false),
-        }
-    }
-
-    fn calculate_laptop_lid_closed() -> Result<bool, Error> {
-        const LAPTOP_LID_ROOT_PATH: &str = "/proc/acpi/button/lid";
-        let readdir = read_dir(LAPTOP_LID_ROOT_PATH)?;
-        for entry in readdir {
-            if let Ok(entry) = entry {
-                if entry.file_name().as_os_str() == "." || entry.file_name().as_os_str() == ".." {
-                    continue;
-                }
-                let mut path = entry.path();
-                path.push("state");
-                let mut lid_file = File::open(path)?;
-                let mut buf = String::new();
-                lid_file.read_to_string(&mut buf)?;
-                if buf.contains("closed") {
-                    return Ok(true);
-                }
-            } else {
-                // TODO log
-            }
-        }
-        Ok(false)
-    }
-}
 
 pub struct Pos {
     x: i32,
     y: i32,
 }
 
+#[derive(Debug, Default)]
 struct Settings {
     info: bool,
     noop: bool,
@@ -68,7 +35,15 @@ fn layout(settings: Settings) -> Result<(), Error> {
     let monitors = Monitors::new();
 
     // discover outputs
-    
+    let current_outputs = xrandrutils::discover_outputs();
+    if current_outputs.is_empty() {
+        bail!("no outputs found");
+    }
+
+    if !settings.quiet || settings.info {
+        println!("{:?}", current_outputs);
+        println!("laptop lid {}", if monitors.laptop_lid_closed { "closed" } else { "open or not present" });
+    }
 
     // output verbose information
     // current info is all output, we're done
@@ -83,5 +58,32 @@ fn layout(settings: Settings) -> Result<(), Error> {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let matches = App::new("xld-rs")
+        .version("0.1")
+        .author("Antoine Busch <antoine.busch@gmail.com>")
+        .about("Arranges outputs in a left to right manner, using highest resolution and refresh.\nDPI is calculated exactly based on the first or primary output's EDID information.\nLaptop outputs are turned off when the lid is closed.\n\ne.g. xld-rs ...")
+        .arg(Arg::with_name("quiet")
+             .help("")
+             .short("q")
+             .long("quiet"))
+        .arg(Arg::with_name("info")
+             .help("")
+             .short("i")
+             .long("info"))
+        .arg(Arg::with_name("mirror")
+             .help("")
+             .short("m")
+             .long("mirror"))
+        .get_matches();
+
+    let settings = Settings {
+        info: matches.is_present("info"),
+        quiet: matches.is_present("quiet"),
+        mirror: matches.is_present("mirror"),
+        ..Settings::default()
+    };
+
+    if let Err(e) = layout(settings) {
+        eprintln!("FAIL: {}", e);
+    }
 }

@@ -15,6 +15,7 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
         let display = xlib::XOpenDisplay(ptr::null()).as_mut().expect("display was null!");
         let default_screen = xlib::XDefaultScreen(display);
         let root_window = xlib::XRootWindow(display, default_screen);
+        let mut outputs = Vec::new();
 
         // Get xrandr resources
         let screen_resources = xrandr::XRRGetScreenResources(display, root_window).as_mut().expect("screen resources were null!");
@@ -49,11 +50,16 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             // iterate all properties to find EDID; XRRQueryOutputProperty fails when queried with XInternAtom
             // TODO finish
 
+            outputs.push(Arc::new(Output {
+                name: name.to_string_lossy().into_owned(),
+                state: state,
+                modes: Vec::new(), // TODO
+
+            }));
         }
 
+        outputs
     }
-
-    Vec::new()
 }
 
 unsafe fn mode_from_xrr(id: xrandr::RRMode, resources: &xrandr::XRRScreenResources) -> Mode {
