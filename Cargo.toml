@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Antoine Busch <abusch@atlassian.com>"]
 
 [dependencies]
-x11="2.7"
+x11= {version="2.7", features=["xlib", "xrandr"]}
 clap="2"
 failure="0.1"
