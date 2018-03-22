@@ -6,7 +6,7 @@ use std::ptr;
 use x11::xlib;
 use x11::xrandr;
 
-use super::{Pos};
+use pos::Pos;
 use edid::Edid;
 use output::{Output, OutputState};
 use mode::Mode;
@@ -25,30 +25,30 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             let rr_output = *screen_resources.outputs.offset(i as isize);
             let output_info = xrandr::XRRGetOutputInfo(display, screen_resources, rr_output).as_mut().expect("output info was null!");
             let name = CStr::from_ptr(output_info.name);
-            let mut state;
-            let current_pos;
-            let current_mode;
-            let mut rr_mode = 0;
+            let mut current_pos = None;
+            let mut current_mode = None;
             let mut edid = None;
-            if output_info.crtc != 0 {
+
+            let state = if output_info.crtc != 0 {
                 // active outputs have crtc info
-                state = OutputState::Active;
                 // current position and mode
                 let crtc_info = xrandr::XRRGetCrtcInfo(display, screen_resources, (*output_info).crtc);
-                current_pos = Pos { x: (*crtc_info).x, y: (*crtc_info).y };
-                rr_mode = (*crtc_info).mode;
-                current_mode = mode_from_xrr(rr_mode, screen_resources);
+                current_pos = Some(Pos { x: (*crtc_info).x, y: (*crtc_info).y });
+                let rr_mode = (*crtc_info).mode;
+                current_mode = Some(Arc::new(mode_from_xrr(rr_mode, screen_resources)));
 
                 if output_info.nmode == 0 {
                     // output is active but disconnected
-                    state = OutputState::Disconnected;
+                    OutputState::Disconnected
+                } else {
+                    OutputState::Active
                 }
             } else if output_info.nmode != 0 {
                 // innactive connected outputs have modes
-                state = OutputState::Connected;
+                OutputState::Connected
             } else {
-                state = OutputState::Disconnected;
-            }
+                OutputState::Disconnected
+            };
 
             // iterate all properties to find EDID; XRRQueryOutputProperty fails when queried with XInternAtom
             let mut nprop: c_int = 0;
@@ -77,18 +77,31 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
 
                     // Convert edid to a slice
                     let edid_slice = ::std::slice::from_raw_parts(props, nitems as usize);
-                    edid = Some(Arc::new(Edid::new(edid_slice, name.to_string_lossy().as_ref())));
+                    edid = Some(Edid::new(edid_slice, name.to_string_lossy().as_ref()));
 
                     break;
                 }
             }
 
-            // TODO finish
+            // Add available modes
+            let mut preferred_mode_idx = 0;
+            let mut modes = Vec::new();
+            for j in 0..output_info.nmode {
+                let mode = Arc::new(mode_from_xrr(*output_info.modes.offset(j as isize), screen_resources));
+                modes.push(mode);
+                if output_info.npreferred == j + 1 {
+                    preferred_mode_idx = j;
+                }
+            }
+            let preferred_mode = modes.get(preferred_mode_idx as usize).cloned();
 
             outputs.push(Arc::new(Output {
                 name: name.to_string_lossy().into_owned(),
                 state,
-                modes: Vec::new(), // TODO
+                modes,
+                preferred_mode,
+                current_mode,
+                current_pos,
                 edid ,
 
             }));

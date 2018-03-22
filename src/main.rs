@@ -5,63 +5,17 @@ extern crate clap;
 extern crate failure;
 
 mod edid;
+mod layout;
 mod mode;
 mod monitors;
 mod output;
+mod pos;
+mod settings;
 mod xrandrutils;
 
-use monitors::Monitors;
-
 use clap::{App, Arg};
-use failure::Error;
 
-pub struct Pos {
-    x: i32,
-    y: i32,
-}
-
-#[derive(Debug, Default)]
-struct Settings {
-    info: bool,
-    noop: bool,
-    mirror: bool,
-    order: Vec<String>,
-    primary: String,
-    quiet: bool,
-}
-
-fn layout(settings: Settings) -> Result<(), Error> {
-    // discover monitors
-    let monitors = Monitors::new();
-
-    // discover outputs
-    let current_outputs = xrandrutils::discover_outputs();
-    if current_outputs.is_empty() {
-        bail!("no outputs found");
-    }
-
-    // output verbose information
-    if !settings.quiet || settings.info {
-        for output in &current_outputs {
-            println!("{}", output);
-        }
-        println!();
-        println!("laptop lid {}", if monitors.laptop_lid_closed { "closed" } else { "open or not present" });
-    }
-
-    // current info is all output, we're done
-    if settings.info {
-        return Ok(());
-    }
-    // Order the outputs if the user wishes
-    // activate outputs and determine primary
-    // arrange mirrored or left to right
-    // determine DPI from the primary
-    // render desired command
-    // execute
-
-    Ok(())
-}
+use settings::Settings;
 
 fn main() {
     let matches = App::new("xld-rs")
@@ -89,7 +43,7 @@ fn main() {
         ..Settings::default()
     };
 
-    if let Err(e) = layout(settings) {
+    if let Err(e) = layout::layout(settings) {
         eprintln!("FAIL: {}", e);
     }
 }
