@@ -7,4 +7,3 @@ pub struct Mode {
     pub height: u32,
     pub refresh: u32,
 }
-

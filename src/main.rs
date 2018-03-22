@@ -1,8 +1,8 @@
 #![allow(dead_code)]
-extern crate x11;
 extern crate clap;
 #[macro_use]
 extern crate failure;
+extern crate x11;
 
 mod edid;
 mod layout;

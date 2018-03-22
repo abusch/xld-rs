@@ -9,9 +9,19 @@ const EDID_BYTE_MAX_CM_VERT: usize = 0x16;
 
 impl Edid {
     pub fn new(edid: &[u8], name: &str) -> Edid {
-        assert!(edid.len() >= EDID_MIN_LENGTH, format!("{} has edid size {}, expected at least {}", name, edid.len(), EDID_MIN_LENGTH));
+        assert!(
+            edid.len() >= EDID_MIN_LENGTH,
+            format!(
+                "{} has edid size {}, expected at least {}",
+                name,
+                edid.len(),
+                EDID_MIN_LENGTH
+            )
+        );
 
-        Edid { edid: Vec::from(edid).into_boxed_slice() }
+        Edid {
+            edid: Vec::from(edid).into_boxed_slice(),
+        }
     }
 
     pub fn max_cm_horiz(&self) -> u32 {

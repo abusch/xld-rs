@@ -7,4 +7,3 @@ pub struct Settings {
     pub primary: String,
     pub quiet: bool,
 }
-

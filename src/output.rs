@@ -7,16 +7,22 @@ use mode::Mode;
 
 #[derive(Debug)]
 pub enum OutputState {
-    Active, Connected, Disconnected
+    Active,
+    Connected,
+    Disconnected,
 }
 
 impl fmt::Display for OutputState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match *self {
-            OutputState::Active => "active",
-            OutputState::Connected => "connected",
-            OutputState::Disconnected => "disconnected",
-        })
+        write!(
+            f,
+            "{}",
+            match *self {
+                OutputState::Active => "active",
+                OutputState::Connected => "connected",
+                OutputState::Disconnected => "disconnected",
+            }
+        )
     }
 }
 

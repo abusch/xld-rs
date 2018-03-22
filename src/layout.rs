@@ -19,7 +19,11 @@ pub fn layout(settings: Settings) -> Result<(), Error> {
         for output in &current_outputs {
             print!("{} {}", output.name, output.state);
             if let Some(ref edid_info) = output.edid {
-                print!(" {}cm/{}cm", edid_info.max_cm_horiz(), edid_info.max_cm_vert())
+                print!(
+                    " {}cm/{}cm",
+                    edid_info.max_cm_horiz(),
+                    edid_info.max_cm_vert()
+                )
             }
             match (&output.current_mode, &output.current_pos) {
                 (&Some(ref current_mode), &Some(ref current_pos)) => {
@@ -31,12 +35,19 @@ pub fn layout(settings: Settings) -> Result<(), Error> {
             }
             println!();
             for mode in &output.modes {
-                    println!("   {}x{} {}Hz", mode.width, mode.height, mode.refresh);
+                println!("   {}x{} {}Hz", mode.width, mode.height, mode.refresh);
             }
         }
         println!();
 
-        println!("laptop lid {}", if monitors.laptop_lid_closed { "closed" } else { "open or not present" });
+        println!(
+            "laptop lid {}",
+            if monitors.laptop_lid_closed {
+                "closed"
+            } else {
+                "open or not present"
+            }
+        );
     }
 
     // current info is all output, we're done
@@ -52,5 +63,3 @@ pub fn layout(settings: Settings) -> Result<(), Error> {
 
     Ok(())
 }
-
-

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::ffi::CStr;
-use std::os::raw::{c_int, c_ulong, c_uchar};
+use std::os::raw::{c_int, c_uchar, c_ulong};
 use std::ptr;
 
 use x11::xlib;
@@ -14,16 +14,22 @@ use mode::Mode;
 pub fn discover_outputs() -> Vec<Arc<Output>> {
     unsafe {
         // Get the display and root window
-        let display = xlib::XOpenDisplay(ptr::null()).as_mut().expect("display was null!");
+        let display = xlib::XOpenDisplay(ptr::null())
+            .as_mut()
+            .expect("display was null!");
         let default_screen = xlib::XDefaultScreen(display);
         let root_window = xlib::XRootWindow(display, default_screen);
         let mut outputs = Vec::new();
 
         // Get xrandr resources
-        let screen_resources = xrandr::XRRGetScreenResources(display, root_window).as_mut().expect("screen resources were null!");
+        let screen_resources = xrandr::XRRGetScreenResources(display, root_window)
+            .as_mut()
+            .expect("screen resources were null!");
         for i in 0..screen_resources.noutput {
             let rr_output = *screen_resources.outputs.offset(i as isize);
-            let output_info = xrandr::XRRGetOutputInfo(display, screen_resources, rr_output).as_mut().expect("output info was null!");
+            let output_info = xrandr::XRRGetOutputInfo(display, screen_resources, rr_output)
+                .as_mut()
+                .expect("output info was null!");
             let name = CStr::from_ptr(output_info.name);
             let mut current_pos = None;
             let mut current_mode = None;
@@ -32,8 +38,12 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             let state = if output_info.crtc != 0 {
                 // active outputs have crtc info
                 // current position and mode
-                let crtc_info = xrandr::XRRGetCrtcInfo(display, screen_resources, (*output_info).crtc);
-                current_pos = Some(Pos { x: (*crtc_info).x, y: (*crtc_info).y });
+                let crtc_info =
+                    xrandr::XRRGetCrtcInfo(display, screen_resources, (*output_info).crtc);
+                current_pos = Some(Pos {
+                    x: (*crtc_info).x,
+                    y: (*crtc_info).y,
+                });
                 let rr_mode = (*crtc_info).mode;
                 current_mode = Some(Arc::new(mode_from_xrr(rr_mode, screen_resources)));
 
@@ -62,18 +72,21 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
                     let mut nitems: c_ulong = 0;
                     let mut bytes_after: c_ulong = 0;
                     let mut props: *mut c_uchar = ptr::null_mut();
-                    xrandr::XRRGetOutputProperty(display, rr_output, atom,
-                                                 0,
-                                                 64,
-                                                 false as xlib::Bool,
-                                                 false as xlib::Bool,
-                                                 xlib::AnyPropertyType as xlib::Atom,
-                                                 &mut actual_type,
-                                                 &mut actual_format,
-                                                 &mut nitems,
-                                                 &mut bytes_after,
-                                                 &mut props,
-                                                 );
+                    xrandr::XRRGetOutputProperty(
+                        display,
+                        rr_output,
+                        atom,
+                        0,
+                        64,
+                        false as xlib::Bool,
+                        false as xlib::Bool,
+                        xlib::AnyPropertyType as xlib::Atom,
+                        &mut actual_type,
+                        &mut actual_format,
+                        &mut nitems,
+                        &mut bytes_after,
+                        &mut props,
+                    );
 
                     // Convert edid to a slice
                     let edid_slice = ::std::slice::from_raw_parts(props, nitems as usize);
@@ -87,7 +100,10 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             let mut preferred_mode_idx = 0;
             let mut modes = Vec::new();
             for j in 0..output_info.nmode {
-                let mode = Arc::new(mode_from_xrr(*output_info.modes.offset(j as isize), screen_resources));
+                let mode = Arc::new(mode_from_xrr(
+                    *output_info.modes.offset(j as isize),
+                    screen_resources,
+                ));
                 modes.push(mode);
                 if output_info.npreferred == j + 1 {
                     preferred_mode_idx = j;
@@ -102,8 +118,7 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
                 preferred_mode,
                 current_mode,
                 current_pos,
-                edid ,
-
+                edid,
             }));
         }
 
@@ -122,7 +137,12 @@ unsafe fn mode_from_xrr(id: xrandr::RRMode, resources: &xrandr::XRRScreenResourc
     }
 
     mode_info
-        .map(|mode_info| Mode {rr_mode: id, width: mode_info.width, height: mode_info.height, refresh: refresh_from_mode_info(&mode_info)})
+        .map(|mode_info| Mode {
+            rr_mode: id,
+            width: mode_info.width,
+            height: mode_info.height,
+            refresh: refresh_from_mode_info(&mode_info),
+        })
         .expect("cannot construct mode: cannot retrieve RRMode")
 }
 
