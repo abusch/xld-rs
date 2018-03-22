@@ -3,20 +3,21 @@ use std::ffi::CStr;
 use std::os::raw::{c_int, c_uchar, c_ulong};
 use std::ptr;
 
+use failure::{err_msg, Error};
 use x11::xlib;
 use x11::xrandr;
 
 use pos::Pos;
 use edid::Edid;
-use output::{Output, OutputState};
+use output::{Output, State};
 use mode::Mode;
 
-pub fn discover_outputs() -> Vec<Arc<Output>> {
+pub fn discover_outputs() -> Result<Vec<Arc<Output>>, Error> {
     unsafe {
         // Get the display and root window
         let display = xlib::XOpenDisplay(ptr::null())
             .as_mut()
-            .expect("display was null!");
+            .ok_or_else(|| err_msg("display was null!"))?;
         let default_screen = xlib::XDefaultScreen(display);
         let root_window = xlib::XRootWindow(display, default_screen);
         let mut outputs = Vec::new();
@@ -24,12 +25,12 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
         // Get xrandr resources
         let screen_resources = xrandr::XRRGetScreenResources(display, root_window)
             .as_mut()
-            .expect("screen resources were null!");
+            .ok_or_else(|| err_msg("screen resources was null!"))?;
         for i in 0..screen_resources.noutput {
             let rr_output = *screen_resources.outputs.offset(i as isize);
             let output_info = xrandr::XRRGetOutputInfo(display, screen_resources, rr_output)
                 .as_mut()
-                .expect("output info was null!");
+                .ok_or_else(|| err_msg("output info was null!"))?;
             let name = CStr::from_ptr(output_info.name);
             let mut current_pos = None;
             let mut current_mode = None;
@@ -45,19 +46,20 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
                     y: (*crtc_info).y,
                 });
                 let rr_mode = (*crtc_info).mode;
-                current_mode = Some(Arc::new(mode_from_xrr(rr_mode, screen_resources)));
+                let mode = mode_from_xrr(rr_mode, screen_resources)?;
+                current_mode = Some(Arc::new(mode));
 
                 if output_info.nmode == 0 {
                     // output is active but disconnected
-                    OutputState::Disconnected
+                    State::Disconnected
                 } else {
-                    OutputState::Active
+                    State::Active
                 }
             } else if output_info.nmode != 0 {
                 // innactive connected outputs have modes
-                OutputState::Connected
+                State::Connected
             } else {
-                OutputState::Disconnected
+                State::Disconnected
             };
 
             // iterate all properties to find EDID; XRRQueryOutputProperty fails when queried with XInternAtom
@@ -100,33 +102,34 @@ pub fn discover_outputs() -> Vec<Arc<Output>> {
             let mut preferred_mode_idx = 0;
             let mut modes = Vec::new();
             for j in 0..output_info.nmode {
-                let mode = Arc::new(mode_from_xrr(
-                    *output_info.modes.offset(j as isize),
-                    screen_resources,
-                ));
-                modes.push(mode);
+                let mode = mode_from_xrr(*output_info.modes.offset(j as isize), screen_resources)?;
+                modes.push(Arc::new(mode));
                 if output_info.npreferred == j + 1 {
                     preferred_mode_idx = j;
                 }
             }
             let preferred_mode = modes.get(preferred_mode_idx as usize).cloned();
 
-            outputs.push(Arc::new(Output {
-                name: name.to_string_lossy().into_owned(),
+            let output = Output::new(
+                name.to_string_lossy().into_owned(),
                 state,
                 modes,
                 preferred_mode,
                 current_mode,
                 current_pos,
                 edid,
-            }));
+            )?;
+            outputs.push(Arc::new(output));
         }
 
-        outputs
+        Ok(outputs)
     }
 }
 
-unsafe fn mode_from_xrr(id: xrandr::RRMode, resources: &xrandr::XRRScreenResources) -> Mode {
+unsafe fn mode_from_xrr(
+    id: xrandr::RRMode,
+    resources: &xrandr::XRRScreenResources,
+) -> Result<Mode, Error> {
     let mut mode_info = None;
     for i in 0..resources.nmode {
         let mode = *resources.modes.offset(i as isize);
@@ -143,7 +146,7 @@ unsafe fn mode_from_xrr(id: xrandr::RRMode, resources: &xrandr::XRRScreenResourc
             height: mode_info.height,
             refresh: refresh_from_mode_info(&mode_info),
         })
-        .expect("cannot construct mode: cannot retrieve RRMode")
+        .ok_or_else(|| err_msg("cannot construct mode: cannot retrieve RRMode"))
 }
 
 fn refresh_from_mode_info(mode_info: &xrandr::XRRModeInfo) -> u32 {

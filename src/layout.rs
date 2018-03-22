@@ -9,7 +9,7 @@ pub fn layout(settings: Settings) -> Result<(), Error> {
     let monitors = Monitors::new();
 
     // discover outputs
-    let current_outputs = discover_outputs();
+    let current_outputs = discover_outputs()?;
     if current_outputs.is_empty() {
         bail!("no outputs found");
     }
