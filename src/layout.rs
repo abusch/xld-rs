@@ -4,7 +4,7 @@ use monitors::Monitors;
 use settings::Settings;
 use xrandrutils::discover_outputs;
 
-pub fn layout(settings: Settings) -> Result<(), Error> {
+pub fn layout(settings: &Settings) -> Result<(), Error> {
     // discover monitors
     let monitors = Monitors::new();
 
@@ -25,13 +25,12 @@ pub fn layout(settings: Settings) -> Result<(), Error> {
                     edid_info.max_cm_vert()
                 )
             }
-            match (&output.current_mode, &output.current_pos) {
-                (&Some(ref current_mode), &Some(ref current_pos)) => {
-                    print!(" {}x{}", current_mode.width, current_mode.height);
-                    print!("+{}+{}", current_pos.x, current_pos.y);
-                    print!(" {}Hz", current_mode.refresh);
-                }
-                _ => {}
+            if let (&Some(ref current_mode), &Some(ref current_pos)) =
+                (&output.current_mode, &output.current_pos)
+            {
+                print!(" {}x{}", current_mode.width, current_mode.height);
+                print!("+{}+{}", current_pos.x, current_pos.y);
+                print!(" {}Hz", current_mode.refresh);
             }
             println!();
             for mode in &output.modes {

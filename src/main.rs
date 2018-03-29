@@ -47,7 +47,7 @@ fn main() {
         ..Settings::default()
     };
 
-    if let Err(e) = layout::layout(settings) {
+    if let Err(e) = layout::layout(&settings) {
         eprintln!("FAIL: {}", e);
     }
 }

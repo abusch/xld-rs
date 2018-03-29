@@ -150,7 +150,7 @@ unsafe fn mode_from_xrr(
 }
 
 fn refresh_from_mode_info(mode_info: &xrandr::XRRModeInfo) -> u32 {
-    let mut v_total = mode_info.vTotal as f64;
+    let mut v_total = f64::from(mode_info.vTotal);
 
     if mode_info.modeFlags & (xrandr::RR_DoubleScan as u64) != 0 {
         v_total *= 2.0;
@@ -160,7 +160,7 @@ fn refresh_from_mode_info(mode_info: &xrandr::XRRModeInfo) -> u32 {
     }
 
     let rate = if mode_info.hTotal != 0 && v_total != 0.0 {
-        mode_info.dotClock as f64 / (mode_info.hTotal as f64 * v_total)
+        mode_info.dotClock as f64 / (f64::from(mode_info.hTotal) * v_total)
     } else {
         0.0
     };

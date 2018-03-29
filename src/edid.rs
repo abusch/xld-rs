@@ -25,10 +25,10 @@ impl Edid {
     }
 
     pub fn max_cm_horiz(&self) -> u32 {
-        self.edid[EDID_BYTE_MAX_CM_HORIZ] as u32
+        u32::from(self.edid[EDID_BYTE_MAX_CM_HORIZ])
     }
 
     pub fn max_cm_vert(&self) -> u32 {
-        self.edid[EDID_BYTE_MAX_CM_VERT] as u32
+        u32::from(self.edid[EDID_BYTE_MAX_CM_VERT])
     }
 }
