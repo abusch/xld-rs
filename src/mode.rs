@@ -10,6 +10,17 @@ pub struct Mode {
     pub refresh: u32,
 }
 
+impl Mode {
+    pub fn new(rr_mode: RRMode, width: u32, height: u32, refresh: u32) -> Mode {
+        Mode {
+            rr_mode,
+            width,
+            height,
+            refresh,
+        }
+    }
+}
+
 impl Ord for Mode {
     fn cmp(&self, other: &Mode) -> Ordering {
         if self.width == other.width {
@@ -33,5 +44,23 @@ impl PartialOrd for Mode {
 impl PartialEq for Mode {
     fn eq(&self, other: &Mode) -> bool {
         self.cmp(&other) == Ordering::Equal
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn order_width() {
+        assert!(Mode::new(0, 1, 2, 2) < Mode::new(0, 2, 1, 1));
+    }
+    #[test]
+    fn order_height() {
+        assert!(Mode::new(0, 1, 1, 2) < Mode::new(0, 1, 2, 1));
+    }
+    #[test]
+    fn order_refresh() {
+        assert!(Mode::new(0, 1, 1, 1) < Mode::new(0, 1, 1, 2));
     }
 }
