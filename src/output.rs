@@ -1,5 +1,4 @@
 use std::fmt;
-use std::sync::Arc;
 
 use failure::Error;
 
@@ -32,9 +31,9 @@ impl fmt::Display for State {
 pub struct Output {
     pub name: String,
     pub state: State,
-    pub modes: Vec<Arc<Mode>>,
-    pub preferred_mode: Option<Arc<Mode>>,
-    pub current_mode: Option<Arc<Mode>>,
+    pub modes: Vec<Mode>,
+    pub preferred_mode: Option<Mode>,
+    pub current_mode: Option<Mode>,
     // optimal_mode: Arc<Mode>,
     pub current_pos: Option<Pos>,
     pub edid: Option<Edid>,
@@ -47,9 +46,9 @@ impl Output {
     pub fn new(
         name: String,
         state: State,
-        modes: Vec<Arc<Mode>>,
-        current_mode: Option<Arc<Mode>>,
-        preferred_mode: Option<Arc<Mode>>,
+        modes: Vec<Mode>,
+        current_mode: Option<Mode>,
+        preferred_mode: Option<Mode>,
         current_pos: Option<Pos>,
         edid: Option<Edid>,
     ) -> Result<Output, Error> {

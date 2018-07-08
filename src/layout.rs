@@ -35,7 +35,22 @@ pub fn layout(settings: &Settings) -> Result<(), Error> {
             }
             println!();
             for mode in &output.modes {
-                println!("   {}x{} {}Hz", mode.width, mode.height, mode.refresh);
+                if Some(mode) == output.current_mode.as_ref() {
+                    print!("*");
+                } else {
+                    print!(" ");
+                }
+                if Some(mode) == output.preferred_mode.as_ref() {
+                    print!("+");
+                } else {
+                    print!(" ");
+                }
+                // if Some(mode) == output.optimal_mode.as_ref() {
+                //     print!("*");
+                // } else {
+                //     print!(" ");
+                // }
+                println!(" {}x{} {}Hz", mode.width, mode.height, mode.refresh);
             }
         }
         println!();

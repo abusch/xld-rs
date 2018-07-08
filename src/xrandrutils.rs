@@ -2,7 +2,6 @@ use std::ffi::CStr;
 use std::os::raw::{c_int, c_uchar, c_ulong};
 use std::process::Command;
 use std::ptr;
-use std::sync::Arc;
 
 use failure::{err_msg, Error};
 use x11::xlib;
@@ -31,19 +30,23 @@ pub fn render_xrandr_command(outputs: &[Output], primary: &Output, dpi: u32) -> 
 
 pub fn discover_outputs() -> Result<Vec<Output>, Error> {
     unsafe {
-        // Get the display and root window
+        // Get the display
         let display = xlib::XOpenDisplay(ptr::null())
             .as_mut()
             .ok_or_else(|| err_msg("display was null!"))?;
+
+        // Get the root window
         let default_screen = xlib::XDefaultScreen(display);
         let root_window = xlib::XRootWindow(display, default_screen);
-        let mut outputs = Vec::new();
 
         // Get xrandr resources
         let screen_resources = xrandr::XRRGetScreenResources(display, root_window)
             .as_mut()
             .ok_or_else(|| err_msg("screen resources was null!"))?;
+
+        let mut outputs = Vec::new();
         for i in 0..screen_resources.noutput {
+            // Current state
             let rr_output = *screen_resources.outputs.offset(i as isize);
             let output_info = xrandr::XRRGetOutputInfo(display, screen_resources, rr_output)
                 .as_mut()
@@ -52,6 +55,7 @@ pub fn discover_outputs() -> Result<Vec<Output>, Error> {
             let mut current_pos = None;
             let mut current_mode = None;
             let mut edid = None;
+            let mut rr_mode = 0;
 
             let state = if output_info.crtc != 0 {
                 // active outputs have crtc info
@@ -62,9 +66,9 @@ pub fn discover_outputs() -> Result<Vec<Output>, Error> {
                     x: (*crtc_info).x,
                     y: (*crtc_info).y,
                 });
-                let rr_mode = (*crtc_info).mode;
+                rr_mode = (*crtc_info).mode;
                 let mode = mode_from_xrr(rr_mode, screen_resources)?;
-                current_mode = Some(Arc::new(mode));
+                current_mode = Some(mode);
 
                 if output_info.nmode == 0 {
                     // output is active but disconnected
@@ -120,9 +124,12 @@ pub fn discover_outputs() -> Result<Vec<Output>, Error> {
             let mut modes = Vec::new();
             for j in 0..output_info.nmode {
                 let mode = mode_from_xrr(*output_info.modes.offset(j as isize), screen_resources)?;
-                modes.push(Arc::new(mode));
+                modes.push(mode.clone());
                 if output_info.npreferred == j + 1 {
                     preferred_mode_idx = j;
+                }
+                if mode.rr_mode == rr_mode {
+                    current_mode = Some(mode);
                 }
             }
             let preferred_mode = modes.get(preferred_mode_idx as usize).cloned();
