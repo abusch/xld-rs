@@ -1,18 +1,35 @@
-use std::sync::Arc;
 use std::ffi::CStr;
 use std::os::raw::{c_int, c_uchar, c_ulong};
+use std::process::Command;
 use std::ptr;
+use std::sync::Arc;
 
 use failure::{err_msg, Error};
 use x11::xlib;
 use x11::xrandr;
 
-use pos::Pos;
 use edid::Edid;
-use output::{Output, State};
 use mode::Mode;
+use output::{Output, State};
+use pos::Pos;
 
-pub fn discover_outputs() -> Result<Vec<Arc<Output>>, Error> {
+pub fn render_xrandr_command(outputs: &[Output], primary: &Output, dpi: u32) -> Command {
+    let mut cmd = Command::new("xrandr");
+    for output in outputs {
+        cmd.arg("--output").arg(&output.name);
+        if output.desired_active {
+            if &output.name == &primary.name {
+                cmd.arg("--primary");
+            }
+        } else {
+            cmd.arg("--off");
+        }
+    }
+
+    cmd
+}
+
+pub fn discover_outputs() -> Result<Vec<Output>, Error> {
     unsafe {
         // Get the display and root window
         let display = xlib::XOpenDisplay(ptr::null())
@@ -119,7 +136,7 @@ pub fn discover_outputs() -> Result<Vec<Arc<Output>>, Error> {
                 current_pos,
                 edid,
             )?;
-            outputs.push(Arc::new(output));
+            outputs.push(output);
         }
 
         Ok(outputs)

@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 use failure::Error;
 
-use pos::Pos;
 use edid::Edid;
 use mode::Mode;
+use pos::Pos;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum State {
     Active,
     Connected,
@@ -28,7 +28,7 @@ impl fmt::Display for State {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Output {
     pub name: String,
     pub state: State,
@@ -38,7 +38,7 @@ pub struct Output {
     // optimal_mode: Arc<Mode>,
     pub current_pos: Option<Pos>,
     pub edid: Option<Edid>,
-    // desired_active: bool,
+    pub desired_active: bool,
     // desired_mode: Arc<Mode>,
     // desired_pos: Arc<Pos>,
 }
@@ -90,6 +90,7 @@ impl Output {
             preferred_mode,
             current_pos,
             edid,
+            desired_active: false,
         })
     }
 }

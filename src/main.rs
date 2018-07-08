@@ -4,6 +4,7 @@ extern crate clap;
 extern crate failure;
 extern crate x11;
 
+mod calculations;
 mod edid;
 mod layout;
 mod mode;

@@ -1,6 +1,6 @@
 use x11::xrandr::RRMode;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Mode {
     pub rr_mode: RRMode,
     pub width: u32,

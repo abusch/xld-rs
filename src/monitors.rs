@@ -3,6 +3,8 @@ use std::io::Read;
 
 use failure::Error;
 
+const LAPTOP_PREFIX: &str = "eDP";
+
 pub struct Monitors {
     pub laptop_lid_closed: bool,
 }
@@ -35,5 +37,9 @@ impl Monitors {
             }
         }
         Ok(false)
+    }
+
+    pub fn should_disable_output(&self, name: &str) -> bool {
+        self.laptop_lid_closed && name.starts_with(LAPTOP_PREFIX)
     }
 }

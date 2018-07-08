@@ -1,8 +1,9 @@
 use failure::Error;
 
+use calculations::{activate_outputs, order_outputs};
 use monitors::Monitors;
 use settings::Settings;
-use xrandrutils::discover_outputs;
+use xrandrutils::{discover_outputs, render_xrandr_command};
 
 pub fn layout(settings: &Settings) -> Result<(), Error> {
     // discover monitors
@@ -54,10 +55,14 @@ pub fn layout(settings: &Settings) -> Result<(), Error> {
         return Ok(());
     }
     // Order the outputs if the user wishes
+    let mut outputs = order_outputs(current_outputs, &settings.order);
     // activate outputs and determine primary
+    let primary = activate_outputs(&mut outputs, &settings.primary, &monitors);
     // arrange mirrored or left to right
     // determine DPI from the primary
     // render desired command
+    let xrandr_cmd = render_xrandr_command(&outputs, &primary, 120);
+    println!("xrandr command: {:?}", xrandr_cmd);
     // execute
 
     Ok(())

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Edid {
     edid: Box<[u8]>,
 }
